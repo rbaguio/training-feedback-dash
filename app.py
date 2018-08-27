@@ -13,8 +13,8 @@ import pandas as pd
 
 # df.drop(df.columns[-2:], inplace=True, axis=1)
 
-
-df = pd.read_csv('sample-data.csv')
+url = 'https://raw.githubusercontent.com/rbaguio/training-feedback-dash/master/sample-data.csv'
+df = pd.read_csv(url)
 
 df.columns = [
     "participant_name",
