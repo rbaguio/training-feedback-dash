@@ -4,80 +4,45 @@ from dash.dependencies import Output, Input
 import dash_html_components as html
 import pandas as pd
 
-# df = pd.read_csv(
-#     'https://docs.google.com/spreadsheets/d/e/'
-#     '2PACX-1vSOCS4BDmbBhGzQcslQzx2iBnFuAjsmCsa'
-#     '2i0fE3mmliWLidL1hRVFH_g2g61ku_5kHXd5HKDKU'
-#     'lHd9/pub?gid=1988319498&single=true&output=csv'
-# )
+# url = 'https://docs.google.com/spreadsheets/d/e/' +\
+#       '2PACX-1vSOCS4BDmbBhGzQcslQzx2iBnFuAjsmCsa' +\
+#       '2i0fE3mmliWLidL1hRVFH_g2g61ku_5kHXd5HKDKU' +\
+#       'lHd9/pub?gid=1988319498&single=true&output=csv'
 
+# url = 'https://raw.githubusercontent.com/rbaguio/training-feedback-dash/master/sample-data.csv'
+
+url = 'https://docs.google.com/spreadsheets/d/1onA4xqBUa_uXDQB6qcS5p-dCetGj9Kpgo3D-VKl1XLw/export?gid=1988319498&format=csv'
+# df = pd.read_csv(url)
 # df.drop(df.columns[-2:], inplace=True, axis=1)
 
-url = 'https://raw.githubusercontent.com/rbaguio/training-feedback-dash/master/sample-data.csv'
-df = pd.read_csv(url)
+# df.columns = [
+#     "participant_name",
+#     "role",
+#     "course",
+#     "instructor-name",
+#     "instructor-clarity",
+#     "instructor-brevity",
+#     "instructor-quality",
+#     "instructor-enthusiasm",
+#     "course-content",
+#     "course-organization",
+#     "course-amount-learned",
+#     "course-relevance",
+#     "comment-most-like",
+#     "comment-least-like",
+#     "comment-improvement",
+#     "net-promoter-score"
+# ]
 
-df.columns = [
-    "participant_name",
-    "role",
-    "course",
-    "instructor-name",
-    "instructor-clarity",
-    "instructor-brevity",
-    "instructor-quality",
-    "instructor-enthusiasm",
-    "course-content",
-    "course-organization",
-    "course-amount-learned",
-    "course-relevance",
-    "comment-most-like",
-    "comment-least-like",
-    "comment-improvement",
-    "net-promoter-score"
+trainers = [
+    'Isaac Reyes',
+    'Jay Manahan',
+    'Rey Baguio',
 ]
 
-idx = list(range(1, 6))
-# Content DataFrame
-
-content_bar_columns = [
-    'content', 'organization', 'amount-learned', 'relevance'
+courses = [
+    'Analytics Talk',
 ]
-
-content_bar_columns_annotation = [
-    'content', 'organization', 'amount <br> learned', 'relevance'
-]
-
-content_df = pd.DataFrame()
-
-for col in content_bar_columns:
-    col_name = f'course-{col}'
-
-    df_hist = df[col_name].value_counts().reindex(
-        idx, fill_value=0.00001
-    ).reset_index()
-
-    df_hist.rename(
-        {f'{col_name}': f'{col_name}-annotation'},
-        axis=1,
-        inplace=True
-    )
-
-    df_hist[f'{col_name}-data'] = df_hist.apply(
-        lambda row:
-            row[f'{col_name}-annotation']
-            if row['index'] > 3 else -row[f'{col_name}-annotation'],
-        axis=1
-    )
-
-    df_hist.set_index('index', inplace=True)
-    df_hist = df_hist.loc[df_hist.index != 3, :]
-    content_df = pd.concat([content_df, df_hist], axis=1)
-
-
-content_df[content_df.columns[content_df.columns.str.contains(
-    'annotation'
-)]] = content_df[content_df.columns[content_df.columns.str.contains(
-    'annotation'
-)]].replace({0.00001: 0})
 
 # Set Graph Elements
 
@@ -132,33 +97,8 @@ labels_dict = {
     5: 'Excellent',
 }
 
-# Create App Traces
-
 app = dash.Dash(__name__)
 server = app.server
-
-
-content_traces = []
-
-for idx, col in zip([4, 5, 2, 1], content_bar_columns):
-    trace_dict = {}
-    trace_dict['y'] = content_bar_columns_annotation
-    trace_dict['x'] = content_df.loc[idx, content_df.columns.str.contains('data')]
-    trace_dict['type'] = 'bar'
-    trace_dict['orientation'] = 'h'
-    trace_dict['text'] = content_df.loc[idx, content_df.columns.str.contains('annotation')]
-    trace_dict['name'] = labels_dict[idx]
-    trace_dict['marker'] = {
-        'color': colors[idx],
-        # 'line': {
-        #     'color': '#FFF',
-        #     'width': 2,
-        # }
-    }
-    trace_dict['hoverinfo'] = 'text'
-
-    content_traces.append(trace_dict)
-
 
 # Create App Layout
 
@@ -169,6 +109,7 @@ app.layout = html.Div([
             'text-align': 'center',
         }
     ),
+    dcc.Interval(id='data-stream', interval=1000, n_intervals=0),
     html.Div([
         html.Div([
             html.H2(
@@ -193,8 +134,8 @@ app.layout = html.Div([
             options=[{
                 'label': trainer,
                 'value': trainer
-            } for trainer in df['instructor-name'].unique()],
-            value=df['instructor-name'].unique().tolist(),
+            } for trainer in trainers],
+            value=trainers,
             multi=True
         ),
         html.H4('Course/s'),
@@ -203,8 +144,8 @@ app.layout = html.Div([
             options=[{
                 'label': course,
                 'value': course
-            } for course in df['course'].unique()],
-            value=df['course'].unique().tolist(),
+            } for course in courses],
+            value=courses,
             multi=True
         ),
     ]),
@@ -216,10 +157,6 @@ app.layout = html.Div([
             ),
             dcc.Graph(
                 id="content-bar-chart",
-                figure={
-                    'data': content_traces,
-                    'layout': content_graph_layout,
-                },
                 style=graph_styles,
             ),
         ],
@@ -237,6 +174,7 @@ app.layout = html.Div([
 filters = [
     Input('trainer-dropdown', 'value'),
     Input('course-dropdown', 'value'),
+    Input('data-stream', 'n_intervals'),
 ]
 
 # Run App
@@ -246,7 +184,29 @@ filters = [
     Output('net-promoter-score', 'children'),
     filters
 )
-def render_nps(trainer, course):
+def render_nps(trainer, course, n_intervals):
+    df = pd.read_csv(url)
+    df.drop(df.columns[-2:], inplace=True, axis=1)
+
+    df.columns = [
+        "participant_name",
+        "role",
+        "course",
+        "instructor-name",
+        "instructor-clarity",
+        "instructor-brevity",
+        "instructor-quality",
+        "instructor-enthusiasm",
+        "course-content",
+        "course-organization",
+        "course-amount-learned",
+        "course-relevance",
+        "comment-most-like",
+        "comment-least-like",
+        "comment-improvement",
+        "net-promoter-score"
+    ]
+
     query = (
         df['instructor-name'].isin(trainer)) & (
         df['course'].isin(course)
@@ -259,12 +219,36 @@ def render_nps(trainer, course):
         html.H2(f'{avg:.1f}')
     ])
 
+    print(filtered_df)
+
 
 @app.callback(
     Output('count-respondents', 'children'),
     filters
 )
-def render_count(trainer, course):
+def render_count(trainer, course, n_intervals):
+    df = pd.read_csv(url)
+    df.drop(df.columns[-2:], inplace=True, axis=1)
+
+    df.columns = [
+        "participant_name",
+        "role",
+        "course",
+        "instructor-name",
+        "instructor-clarity",
+        "instructor-brevity",
+        "instructor-quality",
+        "instructor-enthusiasm",
+        "course-content",
+        "course-organization",
+        "course-amount-learned",
+        "course-relevance",
+        "comment-most-like",
+        "comment-least-like",
+        "comment-improvement",
+        "net-promoter-score"
+    ]
+
     query = (
         df['instructor-name'].isin(trainer)) & (
         df['course'].isin(course)
@@ -282,7 +266,29 @@ def render_count(trainer, course):
     Output('instructor-bar-chart', 'figure'),
     filters
 )
-def update_instructor_bar_chart(trainer, course):
+def update_instructor_bar_chart(trainer, course, n_intervals):
+    df = pd.read_csv(url)
+    df.drop(df.columns[-2:], inplace=True, axis=1)
+
+    df.columns = [
+        "participant_name",
+        "role",
+        "course",
+        "instructor-name",
+        "instructor-clarity",
+        "instructor-brevity",
+        "instructor-quality",
+        "instructor-enthusiasm",
+        "course-content",
+        "course-organization",
+        "course-amount-learned",
+        "course-relevance",
+        "comment-most-like",
+        "comment-least-like",
+        "comment-improvement",
+        "net-promoter-score"
+    ]
+
     query = (
         df['instructor-name'].isin(trainer)) & (
         df['course'].isin(course)
@@ -294,7 +300,7 @@ def update_instructor_bar_chart(trainer, course):
         'clarity', 'brevity', 'quality', 'enthusiasm',
     ]
 
-    idx = list(range(1, 6))
+    idx = list(range(1, 11))
 
     instructor_df = pd.DataFrame()
 
@@ -361,7 +367,29 @@ def update_instructor_bar_chart(trainer, course):
     Output('content-bar-chart', 'figure'),
     filters
 )
-def update_content_bar_chart(trainer, course):
+def update_content_bar_chart(trainer, course, n_intervals):
+    df = pd.read_csv(url)
+    df.drop(df.columns[-2:], inplace=True, axis=1)
+
+    df.columns = [
+        "participant_name",
+        "role",
+        "course",
+        "instructor-name",
+        "instructor-clarity",
+        "instructor-brevity",
+        "instructor-quality",
+        "instructor-enthusiasm",
+        "course-content",
+        "course-organization",
+        "course-amount-learned",
+        "course-relevance",
+        "comment-most-like",
+        "comment-least-like",
+        "comment-improvement",
+        "net-promoter-score"
+    ]
+
     query = (
         df['instructor-name'].isin(trainer)) & (
         df['course'].isin(course)
