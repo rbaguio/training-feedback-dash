@@ -1,0 +1,97 @@
+body {
+	background-color: #077cad !important;
+	padding: 0px!important;
+	margin: 0px!important;
+	font-family: 'Karla', sans-serif;
+	overflow-y: hidden;
+}
+
+#logo {
+	width: 300px;
+	height: auto;
+	padding: 30px;
+	margin-left: calc(50% - 150px);
+	margin-right: calc(50% - 150px);
+}
+
+#settings-container {
+	max-width: 50vw;
+	max-height: 175px;
+	display: inline-block;
+}
+
+#settings {
+	display: flex;
+}
+
+#data-filters {
+	min-width: 420px;
+}
+
+#instructor-chart-container,
+#content-chart-container {
+	width: 100%;
+	display: flex;
+}
+
+#impact-metrics {
+	display: flex;
+}
+
+.header {
+	margin-top: 80px !important;
+	margin-bottom: -25px;
+}
+
+#feedback-header {
+	font-size: 40px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	text-align: center;
+	color: white;
+	margin-left: 90px;
+}
+
+#instructor-betas h5,
+#content-betas h5 {
+	margin-top: 47px;
+	font-size: 17px;
+	color: white;
+}
+
+#content-betas h5:first-child {
+	margin-top: 122px;
+}
+
+.impact-metric-container {
+	border: 1px solid #e2e2e2;
+	padding: 5px 15px;
+	text-align: center;
+	font-size: 15px;
+	color: #d1d1d1;
+	margin: 15px;
+	width: 150px;
+}
+
+.impact-metric-container > h2 {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.impact-metric h2 {
+	font-size: 60px;
+	margin: 0px;
+}
+
+#data-filters h4 {
+	color: white;
+	font-size: 20px;
+	margin: 15px 5px 0px;
+}
+
+th, td {
+	color: white;
+}
+._dash-undo-redo {
+  display: none;
+}
