@@ -9,6 +9,8 @@ from textblob import TextBlob
 from util.tf_idf import tfidf
 from nltk.corpus import stopwords
 import squarify
+import matplotlib
+matplotlib.use('Agg')
 import seaborn as sns
 import plotly.graph_objs as go
 
