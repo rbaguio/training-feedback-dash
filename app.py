@@ -1,8 +1,11 @@
 import dash
 import dash_core_components as dcc
-from dash.dependencies import Output, Input
+from dash.dependencies import *
 import dash_html_components as html
+from sklearn.ensemble import ExtraTreesClassifier
+import numpy as np
 import pandas as pd
+# from util import random_forest
 
 # url = 'https://docs.google.com/spreadsheets/d/e/' +\
 #       '2PACX-1vSOCS4BDmbBhGzQcslQzx2iBnFuAjsmCsa' +\
@@ -15,24 +18,24 @@ url = 'https://docs.google.com/spreadsheets/d/1onA4xqBUa_uXDQB6qcS5p-dCetGj9Kpgo
 # df = pd.read_csv(url)
 # df.drop(df.columns[-2:], inplace=True, axis=1)
 
-# df.columns = [
-#     "participant_name",
-#     "role",
-#     "course",
-#     "instructor-name",
-#     "instructor-clarity",
-#     "instructor-brevity",
-#     "instructor-quality",
-#     "instructor-enthusiasm",
-#     "course-content",
-#     "course-organization",
-#     "course-amount-learned",
-#     "course-relevance",
-#     "comment-most-like",
-#     "comment-least-like",
-#     "comment-improvement",
-#     "net-promoter-score"
-# ]
+col_names = [
+    "participant_name",
+    "role",
+    "course",
+    "instructor-name",
+    "instructor-clarity",
+    "instructor-brevity",
+    "instructor-quality",
+    "instructor-enthusiasm",
+    "course-content",
+    "course-organization",
+    "course-amount-learned",
+    "course-relevance",
+    "comment-most-like",
+    "comment-least-like",
+    "comment-improvement",
+    "net-promoter-score"
+]
 
 trainers = [
     'Isaac Reyes',
@@ -151,6 +154,7 @@ app.layout = html.Div([
     ]),
     html.Div(
         children=[
+            html.Table(id="instrcutor-betas"),
             dcc.Graph(
                 id="instructor-bar-chart",
                 style=graph_styles,
@@ -188,24 +192,7 @@ def render_nps(trainer, course, n_intervals):
     df = pd.read_csv(url)
     df.drop(df.columns[-2:], inplace=True, axis=1)
 
-    df.columns = [
-        "participant_name",
-        "role",
-        "course",
-        "instructor-name",
-        "instructor-clarity",
-        "instructor-brevity",
-        "instructor-quality",
-        "instructor-enthusiasm",
-        "course-content",
-        "course-organization",
-        "course-amount-learned",
-        "course-relevance",
-        "comment-most-like",
-        "comment-least-like",
-        "comment-improvement",
-        "net-promoter-score"
-    ]
+    df.columns = col_names
 
     query = (
         df['instructor-name'].isin(trainer)) & (
@@ -230,24 +217,7 @@ def render_count(trainer, course, n_intervals):
     df = pd.read_csv(url)
     df.drop(df.columns[-2:], inplace=True, axis=1)
 
-    df.columns = [
-        "participant_name",
-        "role",
-        "course",
-        "instructor-name",
-        "instructor-clarity",
-        "instructor-brevity",
-        "instructor-quality",
-        "instructor-enthusiasm",
-        "course-content",
-        "course-organization",
-        "course-amount-learned",
-        "course-relevance",
-        "comment-most-like",
-        "comment-least-like",
-        "comment-improvement",
-        "net-promoter-score"
-    ]
+    df.columns = col_names
 
     query = (
         df['instructor-name'].isin(trainer)) & (
@@ -270,24 +240,7 @@ def update_instructor_bar_chart(trainer, course, n_intervals):
     df = pd.read_csv(url)
     df.drop(df.columns[-2:], inplace=True, axis=1)
 
-    df.columns = [
-        "participant_name",
-        "role",
-        "course",
-        "instructor-name",
-        "instructor-clarity",
-        "instructor-brevity",
-        "instructor-quality",
-        "instructor-enthusiasm",
-        "course-content",
-        "course-organization",
-        "course-amount-learned",
-        "course-relevance",
-        "comment-most-like",
-        "comment-least-like",
-        "comment-improvement",
-        "net-promoter-score"
-    ]
+    df.columns = col_names
 
     query = (
         df['instructor-name'].isin(trainer)) & (
@@ -371,24 +324,7 @@ def update_content_bar_chart(trainer, course, n_intervals):
     df = pd.read_csv(url)
     df.drop(df.columns[-2:], inplace=True, axis=1)
 
-    df.columns = [
-        "participant_name",
-        "role",
-        "course",
-        "instructor-name",
-        "instructor-clarity",
-        "instructor-brevity",
-        "instructor-quality",
-        "instructor-enthusiasm",
-        "course-content",
-        "course-organization",
-        "course-amount-learned",
-        "course-relevance",
-        "comment-most-like",
-        "comment-least-like",
-        "comment-improvement",
-        "net-promoter-score"
-    ]
+    df.columns = col_names
 
     query = (
         df['instructor-name'].isin(trainer)) & (
@@ -464,6 +400,67 @@ def update_content_bar_chart(trainer, course, n_intervals):
         'layout': content_graph_layout,
     }
 
+
+@app.callback(
+    Output('instrcutor-betas', 'children'),
+    filters,
+    # events=Event('data-stream', 'n_intervals'),
+)
+def generate_table_rows(trainer, course):
+    df = pd.read_csv(url)
+    df.drop(df.columns[-2:], inplace=True, axis=1)
+
+    df.columns = [
+        "participant_name",
+        "role",
+        "course",
+        "instructor-name",
+        "instructor-clarity",
+        "instructor-brevity",
+        "instructor-quality",
+        "instructor-enthusiasm",
+        "course-content",
+        "course-organization",
+        "course-amount-learned",
+        "course-relevance",
+        "comment-most-like",
+        "comment-least-like",
+        "comment-improvement",
+        "net-promoter-score"
+    ]
+
+    X = df[df.columns[4:12]]
+    y = df['net-promoter-score']
+
+    forest = ExtraTreesClassifier(
+        n_estimators=10,
+        max_depth=8,
+        max_leaf_nodes=128
+    )
+
+    forest.fit(X, y)
+
+    features = X.columns
+
+    importances = forest.feature_importances_
+    std = np.std(
+        [tree.feature_importances_ for tree in forest.estimators_],
+        axis=0
+    )
+
+    # Reverse sort the indices
+
+    series = pd.Series({
+        feature: score for feature, score in zip(
+            features, std
+        )
+    })
+
+    instructor_series = series[series.index.str.contains('instructor')]
+
+    return [html.Tr([html.Th('beta')])] +[
+        html.Tr(d) for d in instructor_series
+    ]
 
 if __name__ == '__main__':
     app.run_server(debug=True)
