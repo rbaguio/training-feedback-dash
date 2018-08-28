@@ -5,12 +5,12 @@ import dash_html_components as html
 from sklearn.ensemble import ExtraTreesClassifier
 import numpy as np
 import pandas as pd
-# from textblob import TextBlob
-# from util.tf_idf import tfidf
-# from nltk.corpus import stopwords
-# import squarify
-# import seaborn as sns
-# import plotly.graph_objs as go
+from textblob import TextBlob
+from util.tf_idf import tfidf
+from nltk.corpus import stopwords
+import squarify
+import seaborn as sns
+import plotly.graph_objs as go
 
 
 # url = 'https://docs.google.com/spreadsheets/d/e/' +\
@@ -155,48 +155,54 @@ app.layout = html.Div([
     #     id='logo-container'
     # ),
     dcc.Interval(id='data-stream', interval=10000, n_intervals=0),
-    html.Div(
-        html.Div([
-            html.Div([
-                html.Div([
-                    html.H2("Net Promoter Score (Ave)"),
-                    html.Div(id='net-promoter-score', className='impact-metric'),
-                ], className='impact-metric-container'),
-                html.Div([
-                    html.H2('Total Respondents'),
-                    html.Div(id='count-respondents', className='impact-metric'),
-                ], className='impact-metric-container'),
-                html.Div(id='forest-data', style={'display': 'none'}),
-            ], id="impact-metrics"),
-            html.Div([
-                html.H4('Trainer/s'),
-                dcc.Dropdown(
-                    id='trainer-dropdown',
-                    className='dropdown',
-                    options=[{
-                        'label': trainer,
-                        'value': trainer
-                    } for trainer in trainers],
-                    value=trainers,
-                    multi=True
-                ),
-                html.H4('Course/s'),
-                dcc.Dropdown(
-                    id='course-dropdown',
-                    className='dropdown',
-                    options=[{
-                        'label': course,
-                        'value': course
-                    } for course in courses],
-                    value=courses,
-                    multi=True
-                ),
-            ], id='data-filters'),
-        ], id='settings'),
-        id="settings-container"
-    ),
     html.Div([
-        html.H2('Feedback', id="feedback-header"),
+        html.Div(
+            html.Div([
+                html.Div([
+                    html.Div([
+                        html.H2("Net Promoter Score (Ave)"),
+                        html.Div(id='net-promoter-score', className='impact-metric'),
+                    ], className='impact-metric-container'),
+                    html.Div([
+                        html.H2('Total Respondents'),
+                        html.Div(id='count-respondents', className='impact-metric'),
+                    ], className='impact-metric-container'),
+                    html.Div(id='forest-data', style={'display': 'none'}),
+                ], id="impact-metrics"),
+                html.Div([
+                    html.H4('Trainer/s'),
+                    dcc.Dropdown(
+                        id='trainer-dropdown',
+                        className='dropdown',
+                        options=[{
+                            'label': trainer,
+                            'value': trainer
+                        } for trainer in trainers],
+                        value=trainers,
+                        multi=True
+                    ),
+                    html.H4('Course/s'),
+                    dcc.Dropdown(
+                        id='course-dropdown',
+                        className='dropdown',
+                        options=[{
+                            'label': course,
+                            'value': course
+                        } for course in courses],
+                        value=courses,
+                        multi=True
+                    ),
+                ], id='data-filters'),
+            ], id='settings'),
+            id="settings-container"
+        ),
+        html.Div([
+            html.H2('TF-IDF', className="feedback-header"),
+            dcc.Graph(id="treemap", style=treemap_styles)
+        ], id="treemap-container"),
+    ], id='left-side-container'),
+    html.Div([
+        html.H2('Feedback', className="feedback-header"),
         html.Div([
             html.Div(id="instructor-betas", style=table_styles),
             dcc.Graph(
@@ -218,10 +224,7 @@ app.layout = html.Div([
         'flex-direction': 'column',
         'margin': '30px',
     }),
-    html.Div([
-        # dcc.Graph(id="treemap", style=treemap_styles)
-    ], id="treemap-container")
-])
+], style={'display': 'flex'})
 
 filters = [
     Input('trainer-dropdown', 'value'),
@@ -534,121 +537,130 @@ def update_beta_content(json):
     return [html.H5(f'{d:.3f}') for d in filtered_series[::-1]]
 
 
-# @app.callback(
-#     Output('treemap', 'figure'),
-#     filters
-# )
-# def update_treemap(trainer, course, n_intervals):
-#     df = pd.read_csv(url)
-#     df.drop(df.columns[-2:], inplace=True, axis=1)
+@app.callback(
+    Output('treemap', 'figure'),
+    filters
+)
+def update_treemap(trainer, course, n_intervals):
+    df = pd.read_csv(url)
+    df.drop(df.columns[-2:], inplace=True, axis=1)
 
-#     df.columns = col_names
+    df.columns = col_names
 
-#     query = (
-#         df['instructor-name'].isin(trainer)) & (
-#         df['course'].isin(course)
-#     )
+    query = (
+        df['instructor-name'].isin(trainer)) & (
+        df['course'].isin(course)
+    )
 
-#     filtered_df = df[query]
+    filtered_df = df[query]
 
-#     positive_comments = filtered_df[filtered_df.columns[-4]].tolist()
+    positive_comments = filtered_df[filtered_df.columns[-4]].tolist()
 
-#     blob_list = [
-#         TextBlob(str(comment)) for comment in positive_comments
-#     ]
+    blob_list = [
+        TextBlob(str(comment)) for comment in positive_comments
+    ]
 
-#     stop_words = stopwords.words('english')
+    stop_words = stopwords.words('english')
 
-#     keys = {}
-#     for blob in blob_list:
-#         for word in blob.words:
-#             lower_word = word.lower()
-#             keys[lower_word] = tfidf(word, blob, blob_list)
+    keys = {}
+    for blob in blob_list:
+        for word in blob.words:
+            lower_word = word.lower()
+            keys[lower_word] = tfidf(word, blob, blob_list)
 
-#     del keys['nan']
-#     del keys['none']
+    del keys['nan']
+    del keys['none']
 
-#     keywords = {}
-#     for key in keys:
-#         lower_keyword = key.lower()
-#         if lower_keyword not in stop_words:
-#             keywords[key] = keys[key]
-#         else:
-#             continue
+    keywords = {}
+    for key in keys:
+        lower_keyword = key.lower()
+        if lower_keyword not in stop_words:
+            keywords[key] = keys[key]
+        else:
+            continue
 
-#     x = 0
-#     y = 0
-#     width = 100
-#     height = 100
+    x = 0
+    y = 0
+    width = 100
+    height = 100
+    srs = pd.Series(keywords)
+    sorted_srs = srs.sort_values(ascending=False)
+    kw = sorted_srs.index.tolist()
+    values = sorted_srs.tolist()
 
-#     kw = list(keywords.keys())
-#     values = list(keywords.values())
+    # values = [500, 433, 78, 25, 25, 7]
 
-#     normed = squarify.normalize_sizes(values, width, height)
-#     rects = squarify.squarify(normed, x, y, width, height)
-#     color_tuples = sns.color_palette('Blues', len(values))
+    normed = squarify.normalize_sizes(values, width, height)
+    rects = squarify.squarify(normed, x, y, width, height)
+    color_tuples = sns.color_palette(None, len(values))
 
-#     color_brewer = [
-#         'rgb({},{},{})'.format(*tuple(
-#             map(lambda val: int(val * 255), tup)
-#         )) for tup in color_tuples
-#     ]
+    color_hex = [
+        'rgb({},{},{})'.format(*tuple(
+            map(lambda val: int(val * 255), tup)
+        )) for tup in color_tuples
+    ]
 
-#     shapes = []
-#     annotations = []
-#     counter = 0
+    color_brewer = color_hex
 
-#     for r in rects:
-#         shapes.append({
-#             'type': 'rect',
-#             'x0': r['x'],
-#             'y0': r['y'],
-#             'x1': r['x'] + r['dx'],
-#             'y1': r['y'] + r['dy'],
-#             'line': {
-#                 'width': 2,
-#             },
-#             'fillcolor': color_brewer[counter]
-#         })
+    # color_brewer = color_temp[:5] + ['#a9a9a9' for i in range(len(values) - 5)]
 
-#         annotations.append({
-#             'x': r['x'] + (r['dx'] / 2),
-#             'y': r['y'] + (r['dy'] / 2),
-#             'text': values[counter],
-#             'showarrow': False,
-#         })
+    shapes = []
+    annotations = []
+    counter = 0
 
-#         counter += 1
-#         if counter >= len(color_brewer):
-#             counter = 0
+    for r in rects:
+        shapes.append(dict(
+            type='rect',
+            x0=r['x'],
+            y0=r['y'],
+            x1=r['x'] + r['dx'],
+            y1=r['y'] + r['dy'],
+            line=dict(width=2),
+            fillcolor=color_brewer[counter]
+        ))
 
-#     treemap_trace = go.Scatter(
-#         x=[r['x'] + (r['dx'] / 2) for r in rects],
-#         y=[r['y'] + (r['dy'] / 2) for r in rects],
-#         text=[str(v) for v in values],
-#         mode='text',
-#     )
+        annotations.append(dict(
+            x=r['x'] + (r['dx'] / 2),
+            y=r['y'] + (r['dy'] / 2),
+            text=f'{values[counter]:.2f}<br>({kw[counter]})',
+            showarrow=False
+        ))
 
-#     treemap_layout = {
-#         'height': 700,
-#         'width': 700,
-#         'xaxis': {
-#             'showgrid': False,
-#             'zeroline': False,
-#         },
-#         'yaxis': {
-#             'showgrid': False,
-#             'zeroline': False,
-#         },
-#         'shapes': shapes,
-#         'annotations': annotations,
-#         'hovermode': 'closest',
-#     }
+        counter += 1
+        if counter >= len(color_brewer):
+            counter = 0
 
-#     return {
-#         'data': treemap_trace,
-#         'layout': treemap_layout,
-#     }
+    treemap_trace = go.Scatter(
+        x=[r['x'] + (r['dx'] / 2) for r in rects],
+        y=[r['y'] + (r['dy'] / 2) for r in rects],
+        text=[str(v) for v in values],
+        mode='text',
+    )
+
+    treemap_layout = {
+        'height': 700,
+        'width': 700,
+        'xaxis': {
+            'showgrid': False,
+            'zeroline': False,
+            'showticklabels': False
+        },
+        'yaxis': {
+            'showgrid': False,
+            'zeroline': False,
+            'showticklabels': False
+        },
+        'shapes': shapes,
+        'annotations': annotations,
+        'hovermode': 'text',
+        'plot_bgcolor': '#077cad',
+        'paper_bgcolor': '#077cad',
+    }
+
+    return {
+        'data': [treemap_trace],
+        'layout': treemap_layout,
+    }
 
 
 if __name__ == '__main__':

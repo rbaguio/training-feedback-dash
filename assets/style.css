@@ -43,13 +43,20 @@ body {
 	margin-bottom: -25px;
 }
 
-#feedback-header {
+.feedback-header {
 	font-size: 40px;
 	margin-top: 5px;
 	margin-bottom: 5px;
 	text-align: center;
 	color: white;
+}
+
+#chart-container .feedback-header {
 	margin-left: 90px;
+}
+
+#treemap-container .feedback-header {
+	margin-right: 95px;
 }
 
 #instructor-betas h5,
@@ -89,9 +96,7 @@ body {
 	margin: 15px 5px 0px;
 }
 
-th, td {
-	color: white;
-}
 ._dash-undo-redo {
   display: none;
 }
+
