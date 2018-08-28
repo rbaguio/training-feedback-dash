@@ -5,7 +5,13 @@ import dash_html_components as html
 from sklearn.ensemble import ExtraTreesClassifier
 import numpy as np
 import pandas as pd
-# from util import random_forest
+# from textblob import TextBlob
+# from util.tf_idf import tfidf
+# from nltk.corpus import stopwords
+# import squarify
+# import seaborn as sns
+# import plotly.graph_objs as go
+
 
 # url = 'https://docs.google.com/spreadsheets/d/e/' +\
 #       '2PACX-1vSOCS4BDmbBhGzQcslQzx2iBnFuAjsmCsa' +\
@@ -59,6 +65,7 @@ base_graph_layout = {
         'zeroline': True,
         'showline': False,
         'showgrid': False,
+        'domain': [0.025, 1],
     },
     'yaxis': {
         # 'title': 'Y Axis',
@@ -70,22 +77,37 @@ base_graph_layout = {
     'showlegend': False,
     'title': 'Hello World',
     'font': {
-        'family': 'Raleway',
+        'family': 'Karla',
         'size': 14,
-    }
+        'color': 'white',
+    },
+    'titlefont': {
+        'font-weight': '600',
+        'size': 30,
+    },
+    'plot_bgcolor': '#077cad',
+    'paper_bgcolor': '#077cad',
 }
 
 graph_styles = {
-    'width': '40%',
-    'flex': '1 0 50%',
+    'width': '100%',
+    'flex': '1 0 100%',
+    # 'padding': '30px',
 }
 
+table_styles = {
+    # 'margin-top': '50px',
+    # 'flex': '1 0',
+}
+
+treemap_styles = {
+}
 
 instructor_graph_layout = dict(base_graph_layout)
-instructor_graph_layout['title'] = 'Trainer Feedback'
+instructor_graph_layout['title'] = 'Trainer'
 
 content_graph_layout = dict(base_graph_layout)
-content_graph_layout['title'] = 'Content Feedback'
+content_graph_layout['title'] = 'Content'
 
 
 colors = {
@@ -107,75 +129,99 @@ server = app.server
 
 # Create App Layout
 
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <link href="https://fonts.googleapis.com/css?family=Karla" rel="stylesheet"> 
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+        </footer>
+    </body>
+</html>
+'''
+
 app.layout = html.Div([
-    html.H1(
-        children='DataSeer Feedback Dashboard',
-        style={
-            'text-align': 'center',
-        }
-    ),
+    # html.Div(
+    #     html.Img(src='/assets/ds-logo.png', id='logo'),
+    #     id='logo-container'
+    # ),
     dcc.Interval(id='data-stream', interval=10000, n_intervals=0),
-    html.Div([
-        html.Div([
-            html.H2(
-                children='Net Promoter Score (Ave)'
-            ),
-            html.Div(id='net-promoter-score'),
-        ]),
-        html.Div([
-            html.Div(
-                html.H2(
-                    children='Total Respondents'
-                ),
-            ),
-            html.Div(id='count-respondents'),
-        ]),
-    ],
-        id="impact-metrics"),
-    html.Div([
-        html.H4('Trainer/s'),
-        dcc.Dropdown(
-            id='trainer-dropdown',
-            options=[{
-                'label': trainer,
-                'value': trainer
-            } for trainer in trainers],
-            value=trainers,
-            multi=True
-        ),
-        html.H4('Course/s'),
-        dcc.Dropdown(
-            id='course-dropdown',
-            options=[{
-                'label': course,
-                'value': course
-            } for course in courses],
-            value=courses,
-            multi=True
-        ),
-    ]),
     html.Div(
-        children=[
-            html.Table(id="instructor-betas"),
+        html.Div([
+            html.Div([
+                html.Div([
+                    html.H2("Net Promoter Score (Ave)"),
+                    html.Div(id='net-promoter-score', className='impact-metric'),
+                ], className='impact-metric-container'),
+                html.Div([
+                    html.H2('Total Respondents'),
+                    html.Div(id='count-respondents', className='impact-metric'),
+                ], className='impact-metric-container'),
+                html.Div(id='forest-data', style={'display': 'none'}),
+            ], id="impact-metrics"),
+            html.Div([
+                html.H4('Trainer/s'),
+                dcc.Dropdown(
+                    id='trainer-dropdown',
+                    className='dropdown',
+                    options=[{
+                        'label': trainer,
+                        'value': trainer
+                    } for trainer in trainers],
+                    value=trainers,
+                    multi=True
+                ),
+                html.H4('Course/s'),
+                dcc.Dropdown(
+                    id='course-dropdown',
+                    className='dropdown',
+                    options=[{
+                        'label': course,
+                        'value': course
+                    } for course in courses],
+                    value=courses,
+                    multi=True
+                ),
+            ], id='data-filters'),
+        ], id='settings'),
+        id="settings-container"
+    ),
+    html.Div([
+        html.H2('Feedback', id="feedback-header"),
+        html.Div([
+            html.Div(id="instructor-betas", style=table_styles),
             dcc.Graph(
                 id="instructor-bar-chart",
                 style=graph_styles,
             ),
+        ], id='instructor-chart-container'),
+        html.Div([
+            html.Div(id="content-betas", style=table_styles),
             dcc.Graph(
                 id="content-bar-chart",
                 style=graph_styles,
-            ),
-        ],
-        id='chart-container',
-        style={
-            'width': '100%',
-            'display': 'flex',
-        }
-    )
-],
-    style={
-        'font-family': 'Raleway'
-})
+            )
+        ], id="content-chart-container")
+    ], id='chart-container', style={
+        'display': 'inline-flex',
+        'width': '100vw',
+        'max-width': '50%',
+        'flex-direction': 'column',
+        'margin': '30px',
+    }),
+    html.Div([
+        # dcc.Graph(id="treemap", style=treemap_styles)
+    ], id="treemap-container")
+])
 
 filters = [
     Input('trainer-dropdown', 'value'),
@@ -398,10 +444,10 @@ def update_content_bar_chart(trainer, course, n_intervals):
 
 
 @app.callback(
-    Output('instructor-betas', 'children'),
+    Output('forest-data', 'children'),
     filters
 )
-def generate_table_rows(trainer, course, n_intervals):
+def run_regression(trainer, course, n_intervals):
     df = pd.read_csv(url)
     df.drop(df.columns[-2:], inplace=True, axis=1)
 
@@ -441,11 +487,168 @@ def generate_table_rows(trainer, course, n_intervals):
         )
     })
 
-    instructor_series = series[series.index.str.contains('instructor')]
+    return series.to_json(date_format='iso', orient='split')
 
-    return [html.Tr([html.Th('beta')])] + [
-        html.Tr(f'{d:.2f}') for d in instructor_series
-    ]
+
+@app.callback(
+    Output('instructor-betas', 'children'),
+    [Input('forest-data', 'children')],
+)
+def update_beta_instructor(json):
+    json_read_df = pd.read_json(json)
+    series = json_read_df['data']
+    series.index = json_read_df['index']
+
+    filtered_series = series[series.index.str.contains('instructor')]
+
+    # return [html.Tr([html.Th('beta', style=th_styles)])] +\
+    #     [html.Tr(html.Td(f'{d:.3f}', style=td_styles)) for d in filtered_series[::-1]]
+
+    # return [html.Tr([html.Th('name'), html.Th('beta')])] +\
+    #     [html.Tr([
+    #         html.Td(f'{k}'),
+    #         html.Td(f'{v:.2f}')]) for k, v in filtered_series[::-1].iteritems()]
+    return [html.H5('beta', className='header')] + [html.H5(f'{d:.3f}') for d in filtered_series[::-1]]
+
+
+
+@app.callback(
+    Output('content-betas', 'children'),
+    [Input('forest-data', 'children')],
+)
+def update_beta_content(json):
+    json_read_df = pd.read_json(json)
+    series = json_read_df['data']
+    series.index = json_read_df['index']
+
+    filtered_series = series[series.index.str.contains('course')]
+
+    # return [html.Tr([html.Th('beta', style=th_styles)])] +\
+    #     [html.Tr(html.Td(f'{d:.3f}', style=td_styles)) for d in filtered_series[::-1]]
+
+    # return [html.Tr([html.Th('name'), html.Th('beta')])] +\
+    #     [html.Tr([
+    #         html.Td(f'{k}'),
+    #         html.Td(f'{v:.2f}')]) for k, v in filtered_series[::-1].iteritems()]
+
+    return [html.H5(f'{d:.3f}') for d in filtered_series[::-1]]
+
+
+# @app.callback(
+#     Output('treemap', 'figure'),
+#     filters
+# )
+# def update_treemap(trainer, course, n_intervals):
+#     df = pd.read_csv(url)
+#     df.drop(df.columns[-2:], inplace=True, axis=1)
+
+#     df.columns = col_names
+
+#     query = (
+#         df['instructor-name'].isin(trainer)) & (
+#         df['course'].isin(course)
+#     )
+
+#     filtered_df = df[query]
+
+#     positive_comments = filtered_df[filtered_df.columns[-4]].tolist()
+
+#     blob_list = [
+#         TextBlob(str(comment)) for comment in positive_comments
+#     ]
+
+#     stop_words = stopwords.words('english')
+
+#     keys = {}
+#     for blob in blob_list:
+#         for word in blob.words:
+#             lower_word = word.lower()
+#             keys[lower_word] = tfidf(word, blob, blob_list)
+
+#     del keys['nan']
+#     del keys['none']
+
+#     keywords = {}
+#     for key in keys:
+#         lower_keyword = key.lower()
+#         if lower_keyword not in stop_words:
+#             keywords[key] = keys[key]
+#         else:
+#             continue
+
+#     x = 0
+#     y = 0
+#     width = 100
+#     height = 100
+
+#     kw = list(keywords.keys())
+#     values = list(keywords.values())
+
+#     normed = squarify.normalize_sizes(values, width, height)
+#     rects = squarify.squarify(normed, x, y, width, height)
+#     color_tuples = sns.color_palette('Blues', len(values))
+
+#     color_brewer = [
+#         'rgb({},{},{})'.format(*tuple(
+#             map(lambda val: int(val * 255), tup)
+#         )) for tup in color_tuples
+#     ]
+
+#     shapes = []
+#     annotations = []
+#     counter = 0
+
+#     for r in rects:
+#         shapes.append({
+#             'type': 'rect',
+#             'x0': r['x'],
+#             'y0': r['y'],
+#             'x1': r['x'] + r['dx'],
+#             'y1': r['y'] + r['dy'],
+#             'line': {
+#                 'width': 2,
+#             },
+#             'fillcolor': color_brewer[counter]
+#         })
+
+#         annotations.append({
+#             'x': r['x'] + (r['dx'] / 2),
+#             'y': r['y'] + (r['dy'] / 2),
+#             'text': values[counter],
+#             'showarrow': False,
+#         })
+
+#         counter += 1
+#         if counter >= len(color_brewer):
+#             counter = 0
+
+#     treemap_trace = go.Scatter(
+#         x=[r['x'] + (r['dx'] / 2) for r in rects],
+#         y=[r['y'] + (r['dy'] / 2) for r in rects],
+#         text=[str(v) for v in values],
+#         mode='text',
+#     )
+
+#     treemap_layout = {
+#         'height': 700,
+#         'width': 700,
+#         'xaxis': {
+#             'showgrid': False,
+#             'zeroline': False,
+#         },
+#         'yaxis': {
+#             'showgrid': False,
+#             'zeroline': False,
+#         },
+#         'shapes': shapes,
+#         'annotations': annotations,
+#         'hovermode': 'closest',
+#     }
+
+#     return {
+#         'data': treemap_trace,
+#         'layout': treemap_layout,
+#     }
 
 
 if __name__ == '__main__':

@@ -31,12 +31,15 @@ def idf(word, bloblist):
 def tfidf(word, blob, bloblist):
     return tf(word, blob) * idf(word, bloblist)
 
+
 stop_words = stopwords.words('english')
 
 keys = {}
 for blob in blob_list:
     for word in blob.words:
-        keys[word] = tfidf(word, blob, blob_list)
+        lower_word = word.lower()
+        keys[lower_word] = tfidf(word, blob, blob_list)
+
 del keys['nan']
 del keys['none']
 
