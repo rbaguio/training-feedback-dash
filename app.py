@@ -18,6 +18,8 @@ url = 'https://docs.google.com/spreadsheets/d/1onA4xqBUa_uXDQB6qcS5p-dCetGj9Kpgo
 # df = pd.read_csv(url)
 # df.drop(df.columns[-2:], inplace=True, axis=1)
 
+seed_number = 420
+
 col_names = [
     "participant_name",
     "role",
@@ -65,7 +67,7 @@ base_graph_layout = {
         'showgrid': False,
     },
     'barmode': 'relative',
-    # 'showlegend': False,
+    'showlegend': False,
     'title': 'Hello World',
     'font': {
         'family': 'Raleway',
@@ -112,7 +114,7 @@ app.layout = html.Div([
             'text-align': 'center',
         }
     ),
-    dcc.Interval(id='data-stream', interval=1000, n_intervals=0),
+    dcc.Interval(id='data-stream', interval=5000, n_intervals=0),
     html.Div([
         html.Div([
             html.H2(
@@ -154,7 +156,7 @@ app.layout = html.Div([
     ]),
     html.Div(
         children=[
-            html.Table(id="instrcutor-betas"),
+            html.Table(id="instructor-betas"),
             dcc.Graph(
                 id="instructor-bar-chart",
                 style=graph_styles,
@@ -202,11 +204,7 @@ def render_nps(trainer, course, n_intervals):
     filtered_df = df[query]
 
     avg = filtered_df['net-promoter-score'].mean()
-    return html.Div([
-        html.H2(f'{avg:.1f}')
-    ])
-
-    print(filtered_df)
+    return html.H2(f'{avg:.1f}')
 
 
 @app.callback(
@@ -227,9 +225,7 @@ def render_count(trainer, course, n_intervals):
     filtered_df = df[query]
     count = len(filtered_df)
 
-    return html.Div([
-        html.H2(f'{count}')
-    ])
+    return html.H2(f'{count}')
 
 
 @app.callback(
@@ -402,47 +398,36 @@ def update_content_bar_chart(trainer, course, n_intervals):
 
 
 @app.callback(
-    Output('instrcutor-betas', 'children'),
-    filters,
-    # events=Event('data-stream', 'n_intervals'),
+    Output('instructor-betas', 'children'),
+    filters
 )
-def generate_table_rows(trainer, course):
+def generate_table_rows(trainer, course, n_intervals):
     df = pd.read_csv(url)
     df.drop(df.columns[-2:], inplace=True, axis=1)
 
-    df.columns = [
-        "participant_name",
-        "role",
-        "course",
-        "instructor-name",
-        "instructor-clarity",
-        "instructor-brevity",
-        "instructor-quality",
-        "instructor-enthusiasm",
-        "course-content",
-        "course-organization",
-        "course-amount-learned",
-        "course-relevance",
-        "comment-most-like",
-        "comment-least-like",
-        "comment-improvement",
-        "net-promoter-score"
-    ]
+    df.columns = col_names
 
-    X = df[df.columns[4:12]]
-    y = df['net-promoter-score']
+    query = (
+        df['instructor-name'].isin(trainer)) & (
+        df['course'].isin(course)
+    )
+
+    filtered_df = df[query]
+
+    X = filtered_df[df.columns[4:12]]
+    y = filtered_df['net-promoter-score']
 
     forest = ExtraTreesClassifier(
         n_estimators=10,
         max_depth=8,
-        max_leaf_nodes=128
+        max_leaf_nodes=128,
+        random_state=seed_number,
     )
 
     forest.fit(X, y)
 
     features = X.columns
 
-    importances = forest.feature_importances_
     std = np.std(
         [tree.feature_importances_ for tree in forest.estimators_],
         axis=0
@@ -458,9 +443,10 @@ def generate_table_rows(trainer, course):
 
     instructor_series = series[series.index.str.contains('instructor')]
 
-    return [html.Tr([html.Th('beta')])] +[
-        html.Tr(d) for d in instructor_series
+    return [html.Tr([html.Th('beta')])] + [
+        html.Tr(f'{d:.2f}') for d in instructor_series
     ]
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)

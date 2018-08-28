@@ -47,3 +47,9 @@ std = np.std(
 
 # Reverse sort the indices
 indices = np.argsort(importances)[::-1]
+
+series = pd.Series({
+    feature: score for feature, score in zip(
+        features, std
+    )
+})
