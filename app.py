@@ -114,7 +114,7 @@ app.layout = html.Div([
             'text-align': 'center',
         }
     ),
-    dcc.Interval(id='data-stream', interval=1000, n_intervals=0),
+    dcc.Interval(id='data-stream', interval=10000, n_intervals=0),
     html.Div([
         html.Div([
             html.H2(
