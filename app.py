@@ -114,7 +114,7 @@ app.layout = html.Div([
             'text-align': 'center',
         }
     ),
-    dcc.Interval(id='data-stream', interval=1000, n_intervals=0),
+    dcc.Interval(id='data-stream', interval=10000, n_intervals=0),
     html.Div([
         html.Div([
             html.H2(
@@ -397,55 +397,55 @@ def update_content_bar_chart(trainer, course, n_intervals):
     }
 
 
-@app.callback(
-    Output('instructor-betas', 'children'),
-    filters
-)
-def generate_table_rows(trainer, course, n_intervals):
-    df = pd.read_csv(url)
-    df.drop(df.columns[-2:], inplace=True, axis=1)
+# @app.callback(
+#     Output('instructor-betas', 'children'),
+#     filters
+# )
+# def generate_table_rows(trainer, course, n_intervals):
+#     df = pd.read_csv(url)
+#     df.drop(df.columns[-2:], inplace=True, axis=1)
 
-    df.columns = col_names
+#     df.columns = col_names
 
-    query = (
-        df['instructor-name'].isin(trainer)) & (
-        df['course'].isin(course)
-    )
+#     query = (
+#         df['instructor-name'].isin(trainer)) & (
+#         df['course'].isin(course)
+#     )
 
-    filtered_df = df[query]
+#     filtered_df = df[query]
 
-    X = filtered_df[df.columns[4:12]]
-    y = filtered_df['net-promoter-score']
+#     X = filtered_df[df.columns[4:12]]
+#     y = filtered_df['net-promoter-score']
 
-    forest = ExtraTreesClassifier(
-        n_estimators=10,
-        max_depth=8,
-        max_leaf_nodes=128,
-        random_state=seed_number,
-    )
+#     forest = ExtraTreesClassifier(
+#         n_estimators=10,
+#         max_depth=8,
+#         max_leaf_nodes=128,
+#         random_state=seed_number,
+#     )
 
-    forest.fit(X, y)
+#     forest.fit(X, y)
 
-    features = X.columns
+#     features = X.columns
 
-    std = np.std(
-        [tree.feature_importances_ for tree in forest.estimators_],
-        axis=0
-    )
+#     std = np.std(
+#         [tree.feature_importances_ for tree in forest.estimators_],
+#         axis=0
+#     )
 
-    # Reverse sort the indices
+#     # Reverse sort the indices
 
-    series = pd.Series({
-        feature: score for feature, score in zip(
-            features, std
-        )
-    })
+#     series = pd.Series({
+#         feature: score for feature, score in zip(
+#             features, std
+#         )
+#     })
 
-    instructor_series = series[series.index.str.contains('instructor')]
+#     instructor_series = series[series.index.str.contains('instructor')]
 
-    return [html.Tr([html.Th('beta')])] + [
-        html.Tr(f'{d:.2f}') for d in instructor_series
-    ]
+#     return [html.Tr([html.Th('beta')])] + [
+#         html.Tr(f'{d:.2f}') for d in instructor_series
+#     ]
 
 
 if __name__ == '__main__':
