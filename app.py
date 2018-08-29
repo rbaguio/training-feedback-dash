@@ -9,10 +9,11 @@ from textblob import TextBlob
 from util.tf_idf import tfidf
 from nltk.corpus import stopwords
 import squarify
+import plotly.graph_objs as go
 import matplotlib
 matplotlib.use('Agg')
 import seaborn as sns
-import plotly.graph_objs as go
+
 
 
 # url = 'https://docs.google.com/spreadsheets/d/e/' +\
@@ -200,6 +201,7 @@ app.layout = html.Div([
         ),
         html.Div([
             html.H2('TF-IDF', className="feedback-header"),
+            html.P('What did you like most about the training?'),
             dcc.Graph(id="treemap", style=treemap_styles)
         ], id="treemap-container"),
     ], id='left-side-container'),
