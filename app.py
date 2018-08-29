@@ -23,10 +23,13 @@ import seaborn as sns
 
 # url = 'https://raw.githubusercontent.com/rbaguio/training-feedback-dash/master/sample-data.csv'
 
-url = 'https://docs.google.com/spreadsheets/d/1onA4xqBUa_uXDQB6qcS5p-dCetGj9Kpgo3D-VKl1XLw/export?gid=1988319498&format=csv'
+# key = '1V2cw0l7l9y-kKpC9d8t8qVOvtUs2PaphPpIE3eRxLgY'
+# form_id = '1101984459'
+# url = f'https://docs.google.com/spreadsheets/d/{key}/export?gid={form_id}&format=csv'
 # df = pd.read_csv(url)
 # df.drop(df.columns[-2:], inplace=True, axis=1)
 
+url = 'https://docs.google.com/spreadsheets/d/1onA4xqBUa_uXDQB6qcS5p-dCetGj9Kpgo3D-VKl1XLw/export?gid=1988319498&format=csv'
 seed_number = 420
 
 col_names = [
@@ -55,7 +58,12 @@ trainers = [
 ]
 
 courses = [
+    # 'Data Storytelling for Business',
+    # 'Excel Analytics Ninja',
     'Analytics Talk',
+    'Advanced Visualization and Dashboard Design',
+    # 'Intro to R for Business Intelligence',
+    # 'Intro to Data Science',
 ]
 
 # Set Graph Elements
@@ -77,7 +85,7 @@ base_graph_layout = {
         'showgrid': False,
     },
     'barmode': 'relative',
-    'showlegend': False,
+    # 'showlegend': False,
     'title': 'Hello World',
     'font': {
         'family': 'Karla',
@@ -111,6 +119,7 @@ instructor_graph_layout['title'] = 'Trainer'
 
 content_graph_layout = dict(base_graph_layout)
 content_graph_layout['title'] = 'Content'
+content_graph_layout['showlegend'] = False
 
 
 colors = {
@@ -246,7 +255,7 @@ filters = [
 def render_nps(trainer, course, n_intervals):
     df = pd.read_csv(url)
     df.drop(df.columns[-2:], inplace=True, axis=1)
-
+    print(df)
     df.columns = col_names
 
     query = (
@@ -476,25 +485,27 @@ def run_regression(trainer, course, n_intervals):
         max_leaf_nodes=128,
         random_state=seed_number,
     )
+    if len(df) >= 15:
+        forest.fit(X, y)
 
-    forest.fit(X, y)
+        features = X.columns
 
-    features = X.columns
-
-    std = np.std(
-        [tree.feature_importances_ for tree in forest.estimators_],
-        axis=0
-    )
-
-    # Reverse sort the indices
-
-    series = pd.Series({
-        feature: score for feature, score in zip(
-            features, std
+        std = np.std(
+            [tree.feature_importances_ for tree in forest.estimators_],
+            axis=0
         )
-    })
 
-    return series.to_json(date_format='iso', orient='split')
+        # Reverse sort the indices
+
+        series = pd.Series({
+            feature: score for feature, score in zip(
+                features, std
+            )
+        })
+
+        return series.to_json(date_format='iso', orient='split')
+    else:
+        return pd.Series().to_json(date_format='iso', orient='split')
 
 
 @app.callback(
@@ -503,20 +514,23 @@ def run_regression(trainer, course, n_intervals):
 )
 def update_beta_instructor(json):
     json_read_df = pd.read_json(json)
-    series = json_read_df['data']
-    series.index = json_read_df['index']
 
-    filtered_series = series[series.index.str.contains('instructor')]
+    if len(json_read_df) > 0:
+        series = json_read_df['data']
+        series.index = json_read_df['index']
 
-    # return [html.Tr([html.Th('beta', style=th_styles)])] +\
-    #     [html.Tr(html.Td(f'{d:.3f}', style=td_styles)) for d in filtered_series[::-1]]
+        filtered_series = series[series.index.str.contains('instructor')]
 
-    # return [html.Tr([html.Th('name'), html.Th('beta')])] +\
-    #     [html.Tr([
-    #         html.Td(f'{k}'),
-    #         html.Td(f'{v:.2f}')]) for k, v in filtered_series[::-1].iteritems()]
-    return [html.H5('beta', className='header')] + [html.H5(f'{d:.3f}') for d in filtered_series[::-1]]
+        # return [html.Tr([html.Th('beta', style=th_styles)])] +\
+        #     [html.Tr(html.Td(f'{d:.3f}', style=td_styles)) for d in filtered_series[::-1]]
 
+        # return [html.Tr([html.Th('name'), html.Th('beta')])] +\
+        #     [html.Tr([
+        #         html.Td(f'{k}'),
+        #         html.Td(f'{v:.2f}')]) for k, v in filtered_series[::-1].iteritems()]
+        return [html.H5('beta', className='header')] + [html.H5(f'{d:.3f}') for d in filtered_series[::-1]]
+    else:
+        return html.H5('')
 
 
 @app.callback(
@@ -527,18 +541,20 @@ def update_beta_content(json):
     json_read_df = pd.read_json(json)
     series = json_read_df['data']
     series.index = json_read_df['index']
+    if len(json_read_df) > 0:
+        filtered_series = series[series.index.str.contains('course')]
 
-    filtered_series = series[series.index.str.contains('course')]
+        # return [html.Tr([html.Th('beta', style=th_styles)])] +\
+        #     [html.Tr(html.Td(f'{d:.3f}', style=td_styles)) for d in filtered_series[::-1]]
 
-    # return [html.Tr([html.Th('beta', style=th_styles)])] +\
-    #     [html.Tr(html.Td(f'{d:.3f}', style=td_styles)) for d in filtered_series[::-1]]
+        # return [html.Tr([html.Th('name'), html.Th('beta')])] +\
+        #     [html.Tr([
+        #         html.Td(f'{k}'),
+        #         html.Td(f'{v:.2f}')]) for k, v in filtered_series[::-1].iteritems()]
 
-    # return [html.Tr([html.Th('name'), html.Th('beta')])] +\
-    #     [html.Tr([
-    #         html.Td(f'{k}'),
-    #         html.Td(f'{v:.2f}')]) for k, v in filtered_series[::-1].iteritems()]
-
-    return [html.H5(f'{d:.3f}') for d in filtered_series[::-1]]
+        return [html.H5(f'{d:.3f}') for d in filtered_series[::-1]]
+    else:
+        return html.H5('')
 
 
 @app.callback(
@@ -571,9 +587,11 @@ def update_treemap(trainer, course, n_intervals):
         for word in blob.words:
             lower_word = word.lower()
             keys[lower_word] = tfidf(word, blob, blob_list)
+    if 'nan' in keys.keys():
+        del keys['nan']
 
-    del keys['nan']
-    del keys['none']
+    if 'none' in keys.keys():
+        del keys['none']
 
     keywords = {}
     for key in keys:
