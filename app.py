@@ -485,7 +485,7 @@ def run_regression(trainer, course, n_intervals):
         max_leaf_nodes=128,
         random_state=seed_number,
     )
-    if len(df) >= 15:
+    if len(df) > 0:
         forest.fit(X, y)
 
         features = X.columns
