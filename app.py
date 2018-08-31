@@ -58,7 +58,7 @@ trainers = [
 ]
 
 courses = [
-    # 'Data Storytelling for Business',
+    'Data Storytelling for Business',
     # 'Excel Analytics Ninja',
     'Analytics Talk',
     'Advanced Visualization and Dashboard Design',
